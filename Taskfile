@@ -1,0 +1,5 @@
+APP_NAME = call
+VERSION = $(git describe --tags)
+
+[dependencies]
+shell = go get -v
