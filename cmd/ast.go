@@ -17,13 +17,47 @@ type (
 
 	Value struct {
 		String    string
-		Shell     []string
-		Variables []string
+		Shell     map[int]string
+		Variables map[int]string
 	}
 )
 
+func parseSubShell(tokens []Token, index *int) (string, error) {
+	varPose := *index
+	varPose++ // Move to '('
+	var shellString strings.Builder
+
+	while := true
+	for while {
+		varPose++
+
+		if varPose >= len(tokens) {
+			return "", fmt.Errorf("Invalid token index for shell command: %d", varPose)
+		}
+
+		tok := tokens[varPose]
+		switch tok.Type {
+		case RPAREN:
+			while = false
+		case ESCAPE:
+			varPose++
+			shellString.WriteString(tokens[varPose].Literal)
+		default:
+			shellString.WriteString(tokens[varPose].Literal)
+		}
+	}
+
+	*index = varPose
+
+	return shellString.String(), nil
+}
+
 func parseValues(tokens []Token) (Value, error) {
-	var value Value
+	value := Value{
+		Shell:     make(map[int]string),
+		Variables: make(map[int]string),
+	}
+
 	var currentString strings.Builder
 
 	for i := 0; i < len(tokens); i++ {
@@ -33,29 +67,16 @@ func parseValues(tokens []Token) (Value, error) {
 			switch {
 			case tokens[i+1].Type == LCURLY && tokens[i+3].Type == RCURLY:
 				varName := tokens[i+2]
-				currentString.WriteString("%s")
-				value.Variables = append(value.Variables, varName.Literal)
+				value.Variables[currentString.Len()] = varName.Literal
 				i += 3
 
 			case tokens[i+1].Type == LPAREN:
-				i++
-				var shellString strings.Builder
-				while := true
-				for while {
-					i++
-					tok := tokens[i]
-					switch tok.Type {
-					case RPAREN:
-						while = false
-					case ESCAPE:
-						i++
-						shellString.WriteString(tokens[i].Literal)
-					default:
-						shellString.WriteString(tokens[i].Literal)
-					}
+				subShellString, err := parseSubShell(tokens, &i)
+				if err != nil {
+					return value, err
 				}
-				currentString.WriteString("%s")
-				value.Shell = append(value.Shell, shellString.String())
+				value.Shell[currentString.Len()] = subShellString
+
 			default:
 				currentString.WriteString(token.Literal)
 			}
