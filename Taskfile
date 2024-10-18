@@ -1,8 +1,7 @@
 APP_NAME = call
-VERSION = $(git describe --tags)
 
 [dependencies]
-shell = go get -v
+cmd = go get -v
 
 [build]
-shell = go build -o ${APP_NAME}
+cmd = go build -o ${APP_NAME}

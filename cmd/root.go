@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -22,6 +21,15 @@ func Log(p string, a ...any) {
 	fmt.Fprintln(os.Stderr, a...)
 }
 
+func runSection(s Section) {
+	if len(s.Shell) > 0 {
+		RunShell(s.Shell, false)
+	}
+	if len(s.Command) > 0 {
+		RunCommand(s.Command, false)
+	}
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "call [call-flags] -- [command]",
 	Short: "A brief description of your application",
@@ -38,13 +46,25 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		json.NewEncoder(os.Stdout).Encode(ast)
 		config, err := GetConfig(ast)
 		if err != nil {
 			panic(err)
 		}
 
-		json.NewEncoder(os.Stdout).Encode(config)
+		if len(args) == 0 {
+			if defaultSection, found := config.Sections["default"]; found {
+				runSection(defaultSection)
+			} else {
+				return fmt.Errorf("Default section doesn't exists")
+			}
+		}
+		for _, arg := range args {
+			if section, found := config.Sections[arg]; found {
+				runSection(section)
+			} else {
+				return fmt.Errorf("%s section doesn't exists", arg)
+			}
+		}
 
 		return nil
 	},
