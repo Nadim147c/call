@@ -17,7 +17,7 @@ const (
 	RCURLY               // '}'
 	LBRACKET             // '['
 	RBRACKET             // ']'
-	WHITESPACE           // \s \t
+	WHITESPACE           // '\s' '\t'
 )
 
 type Token struct {

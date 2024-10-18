@@ -33,7 +33,13 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		config, err := GetAst(string(taskFile))
+		ast, err := GetAst(string(taskFile))
+		if err != nil {
+			panic(err)
+		}
+
+		json.NewEncoder(os.Stdout).Encode(ast)
+		config, err := GetConfig(ast)
 		if err != nil {
 			panic(err)
 		}

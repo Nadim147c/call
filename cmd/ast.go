@@ -7,15 +7,14 @@ import (
 
 type (
 	AST struct {
-		Properties Properties
-		Sections   Sections
+		Properties AstProperties
+		Sections   AstSections
 	}
 
-	Sections map[string]Properties
+	AstSections   map[string]AstProperties
+	AstProperties map[string][]AstValue
 
-	Properties map[string][]Value
-
-	Value struct {
+	AstValue struct {
 		String    string
 		Shell     map[int]string
 		Variables map[int]string
@@ -52,8 +51,8 @@ func parseSubShell(tokens []Token, index *int) (string, error) {
 	return shellString.String(), nil
 }
 
-func parseValues(tokens []Token) (Value, error) {
-	value := Value{
+func parseValues(tokens []Token) (AstValue, error) {
+	value := AstValue{
 		Shell:     make(map[int]string),
 		Variables: make(map[int]string),
 	}
@@ -93,7 +92,7 @@ func parseValues(tokens []Token) (Value, error) {
 }
 
 func GetAst(s string) (AST, error) {
-	config := AST{Sections: make(Sections), Properties: make(Properties)}
+	config := AST{Sections: make(AstSections), Properties: make(AstProperties)}
 
 	lexer := NewLexer(s)
 	var currentSection string
@@ -112,7 +111,7 @@ func GetAst(s string) (AST, error) {
 			}
 
 			currentSection = tok.Literal
-			config.Sections[tok.Literal] = make(Properties)
+			config.Sections[tok.Literal] = make(AstProperties)
 			continue
 		}
 
