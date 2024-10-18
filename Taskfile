@@ -3,8 +3,9 @@ APP_NAME = call
 [default]
 cmd = go build -v -o ${APP_NAME}
 
-[dependencies]
+[deps]
 cmd = go get -v
+cmd = go mod tidy
 
 [build]
 cmd = go build -o ${APP_NAME}

@@ -67,18 +67,22 @@ func GetConfig(ast AST) (Config, error) {
 
 	for section, properties := range ast.Sections {
 		sec := Section{}
-		for key, value := range properties {
+		for key, values := range properties {
 			switch key {
 			case "shell":
-				str := value[0].String
-				expendShell(&str, value[0])
-				expendVariable(&config, &str, value[0])
-				sec.Shell = append(sec.Shell, str)
+				for _, value := range values {
+					str := value.String
+					expendShell(&str, value)
+					expendVariable(&config, &str, value)
+					sec.Shell = append(sec.Shell, str)
+				}
 			case "cmd":
-				str := value[0].String
-				expendShell(&str, value[0])
-				expendVariable(&config, &str, value[0])
-				sec.Command = append(sec.Command, str)
+				for _, value := range values {
+					str := value.String
+					expendShell(&str, value)
+					expendVariable(&config, &str, value)
+					sec.Command = append(sec.Command, str)
+				}
 			}
 		}
 		config.Sections[section] = sec
