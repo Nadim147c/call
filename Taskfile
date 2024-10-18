@@ -1,7 +1,13 @@
 APP_NAME = call
 
+[default]
+cmd = go build -v -o ${APP_NAME}
+
 [dependencies]
 cmd = go get -v
 
 [build]
 cmd = go build -o ${APP_NAME}
+
+[install]
+cmd = go install
