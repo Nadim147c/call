@@ -17,6 +17,7 @@ type (
 
 	Value struct {
 		String    string
+		Shell     []string
 		Variables []string
 	}
 )
@@ -29,12 +30,33 @@ func parseValues(tokens []Token) (Value, error) {
 		token := tokens[i]
 		switch token.Type {
 		case VAR:
-			if tokens[i+1].Type == LCURLY && tokens[i+3].Type == RCURLY {
+			switch {
+			case tokens[i+1].Type == LCURLY && tokens[i+3].Type == RCURLY:
 				varName := tokens[i+2]
 				currentString.WriteString("%s")
 				value.Variables = append(value.Variables, varName.Literal)
 				i += 3
-			} else {
+
+			case tokens[i+1].Type == LPAREN:
+				i++
+				var shellString strings.Builder
+				while := true
+				for while {
+					i++
+					tok := tokens[i]
+					switch tok.Type {
+					case RPAREN:
+						while = false
+					case ESCAPE:
+						i++
+						shellString.WriteString(tokens[i].Literal)
+					default:
+						shellString.WriteString(tokens[i].Literal)
+					}
+				}
+				currentString.WriteString("%s")
+				value.Shell = append(value.Shell, shellString.String())
+			default:
 				currentString.WriteString(token.Literal)
 			}
 		case ESCAPE:
