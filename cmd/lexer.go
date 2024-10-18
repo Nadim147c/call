@@ -10,8 +10,11 @@ const (
 	INT                  // Integer literals
 	ASSIGN               // '='
 	VAR                  // '$'
+	ESCAPE               // '\'
 	LPAREN               // '('
 	RPAREN               // ')'
+	LCURLY               // '{'
+	RCURLY               // '}'
 	LBRACKET             // '['
 	RBRACKET             // ']'
 	WHITESPACE           // \s \t
@@ -56,6 +59,9 @@ func (l *Lexer) NextToken() Token {
 	case '=':
 		tok = Token{Type: ASSIGN, Literal: string(l.char)}
 		l.currentToken = tok
+	case '\\':
+		tok = Token{Type: ESCAPE, Literal: string(l.char)}
+		l.currentToken = tok
 	case '$':
 		tok = Token{Type: VAR, Literal: string(l.char)}
 		l.currentToken = tok
@@ -64,6 +70,12 @@ func (l *Lexer) NextToken() Token {
 		l.currentToken = tok
 	case ')':
 		tok = Token{Type: RPAREN, Literal: string(l.char)}
+		l.currentToken = tok
+	case '{':
+		tok = Token{Type: LCURLY, Literal: string(l.char)}
+		l.currentToken = tok
+	case '}':
+		tok = Token{Type: RCURLY, Literal: string(l.char)}
 		l.currentToken = tok
 	case '[':
 		tok = Token{Type: LBRACKET, Literal: string(l.char)}

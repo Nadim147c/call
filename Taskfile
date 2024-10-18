@@ -3,3 +3,6 @@ VERSION = $(git describe --tags)
 
 [dependencies]
 shell = go get -v
+
+[build]
+shell = go build -o ${APP_NAME}

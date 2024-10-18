@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 )
 
 type (
@@ -12,10 +13,41 @@ type (
 
 	Sections map[string]Properties
 
-	Properties map[string][]Values
+	Properties map[string][]Value
 
-	Values []Token
+	Value struct {
+		String    string
+		Variables []string
+	}
 )
+
+func parseValues(tokens []Token) (Value, error) {
+	var value Value
+	var currentString strings.Builder
+
+	for i := 0; i < len(tokens); i++ {
+		token := tokens[i]
+		switch token.Type {
+		case VAR:
+			if tokens[i+1].Type == LCURLY && tokens[i+3].Type == RCURLY {
+				varName := tokens[i+2]
+				currentString.WriteString("%s")
+				value.Variables = append(value.Variables, varName.Literal)
+				i += 3
+			} else {
+				currentString.WriteString(token.Literal)
+			}
+		case ESCAPE:
+			i++
+			currentString.WriteString(tokens[i].Literal)
+		default:
+			currentString.WriteString(token.Literal)
+		}
+	}
+
+	value.String = currentString.String()
+	return value, nil
+}
 
 func GetAst(s string) (AST, error) {
 	config := AST{Sections: make(Sections), Properties: make(Properties)}
@@ -51,7 +83,7 @@ func GetAst(s string) (AST, error) {
 			// do nothing
 		}
 
-		values := Values{lexer.currentToken}
+		values := []Token{lexer.currentToken}
 
 		for true {
 			tok := lexer.NextToken()
@@ -65,10 +97,15 @@ func GetAst(s string) (AST, error) {
 			return config, fmt.Errorf("Invalid tokens %+v, %+v, %+v", key, assign, values)
 		}
 
+		value, err := parseValues(values)
+		if err != nil {
+			return config, err
+		}
+
 		if currentSection == "" {
-			config.Properties[key.Literal] = append(config.Properties[key.Literal], values)
+			config.Properties[key.Literal] = append(config.Properties[key.Literal], value)
 		} else {
-			config.Sections[currentSection][key.Literal] = append(config.Sections[currentSection][key.Literal], values)
+			config.Sections[currentSection][key.Literal] = append(config.Sections[currentSection][key.Literal], value)
 		}
 
 	}
