@@ -17,6 +17,7 @@ const (
 	RCURLY               // '}'
 	LBRACKET             // '['
 	RBRACKET             // ']'
+	OPTIONAL             // '?'
 	WHITESPACE           // '\s' '\t'
 )
 
@@ -82,6 +83,9 @@ func (l *Lexer) NextToken() Token {
 		l.currentToken = tok
 	case ']':
 		tok = Token{Type: RBRACKET, Literal: string(l.char)}
+		l.currentToken = tok
+	case '?':
+		tok = Token{Type: OPTIONAL, Literal: string(l.char)}
 		l.currentToken = tok
 	case '\r':
 		literal := "\r"

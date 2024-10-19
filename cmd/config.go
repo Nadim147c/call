@@ -66,12 +66,21 @@ func GetConfig(ast AST) (Config, error) {
 		Properties: make(Properties),
 	}
 
-	for key, value := range ast.Properties {
-		str := value[0].String
-		expendVariable(&config, &str, value[0])
-		expendSubShell(&config, &str, value[0])
+	for key, values := range ast.Properties {
+		for _, value := range values {
+			if _, keyExists := config.Properties[key]; keyExists && value.Optional {
+				continue
+			}
 
-		config.Properties[key] = str
+			str := value.String
+
+			expendVariable(&config, &str, value)
+			expendSubShell(&config, &str, value)
+
+			if str != "" {
+				config.Properties[key] = str
+			}
+		}
 	}
 
 	for section, properties := range ast.Sections {

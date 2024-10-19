@@ -16,6 +16,7 @@ type (
 
 	AstValue struct {
 		String    string
+		Optional  bool
 		Shell     map[int]string
 		Variables map[int]string
 	}
@@ -119,7 +120,13 @@ func GetAst(s string) (AST, error) {
 		for lexer.NextToken().Type == WHITESPACE {
 			// do nothing
 		}
-		assign := lexer.currentToken
+		var assign Token
+		optional := lexer.currentToken
+		if optional.Type == OPTIONAL {
+			assign = lexer.NextToken()
+		} else {
+			assign = optional
+		}
 		// Get the assign token
 		for lexer.NextToken().Type == WHITESPACE {
 			// do nothing
@@ -144,12 +151,18 @@ func GetAst(s string) (AST, error) {
 			return config, err
 		}
 
-		if currentSection == "" {
-			config.Properties[key.Literal] = append(config.Properties[key.Literal], value)
-		} else {
+		if currentSection != "" {
 			config.Sections[currentSection][key.Literal] = append(config.Sections[currentSection][key.Literal], value)
+			continue
 		}
 
+		if optional.Type != OPTIONAL {
+			config.Properties[key.Literal] = append(config.Properties[key.Literal], value)
+			continue
+		}
+
+		value.Optional = true
+		config.Properties[key.Literal] = append(config.Properties[key.Literal], value)
 	}
 
 	return config, nil
