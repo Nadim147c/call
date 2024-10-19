@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"strings"
+	"unicode"
 )
 
 type (
@@ -28,15 +31,21 @@ func insertAtIndex(s string, insert string, idx int) string {
 	return s[:idx] + insert + s[idx:]
 }
 
-func expendSubShell(s *string, value AstValue) {
+func expendSubShell(c *Config, s *string, value AstValue) {
 	for idx, sh := range value.Shell {
 		cmd := exec.Command("sh", "-c", sh)
+		cmd.Env = os.Environ()
+
+		for key, value := range c.Properties {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+		}
 
 		output, err := cmd.Output()
+		outString := strings.TrimRightFunc(string(output), unicode.IsSpace)
 		if err == nil {
-			*s = insertAtIndex(*s, string(output), idx)
+			*s = insertAtIndex(*s, outString, idx)
 		} else {
-			Log(fmt.Sprintf("Shell $(%s)", sh), err)
+			Debug(fmt.Sprintf("Shell $(%s)", sh), err)
 		}
 	}
 }
@@ -59,8 +68,8 @@ func GetConfig(ast AST) (Config, error) {
 
 	for key, value := range ast.Properties {
 		str := value[0].String
-		expendSubShell(&str, value[0])
 		expendVariable(&config, &str, value[0])
+		expendSubShell(&config, &str, value[0])
 
 		config.Properties[key] = str
 	}
@@ -72,15 +81,15 @@ func GetConfig(ast AST) (Config, error) {
 			case "shell":
 				for _, value := range values {
 					str := value.String
-					expendSubShell(&str, value)
 					expendVariable(&config, &str, value)
+					expendSubShell(&config, &str, value)
 					sec.Shell = append(sec.Shell, str)
 				}
 			case "cmd":
 				for _, value := range values {
 					str := value.String
-					expendSubShell(&str, value)
 					expendVariable(&config, &str, value)
+					expendSubShell(&config, &str, value)
 					sec.Command = append(sec.Command, str)
 				}
 			}

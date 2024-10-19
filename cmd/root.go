@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -46,10 +47,22 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
+		astJson, err := json.MarshalIndent(ast, "", " ")
+		if err != nil {
+			panic(err)
+		}
+		Debug("AST", string(astJson))
+
 		config, err := GetConfig(ast)
 		if err != nil {
 			panic(err)
 		}
+
+		configJson, err := json.MarshalIndent(config, "", " ")
+		if err != nil {
+			panic(err)
+		}
+		Debug("Config", string(configJson))
 
 		if len(args) == 0 {
 			if defaultSection, found := config.Sections["default"]; found {
