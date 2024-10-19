@@ -28,7 +28,7 @@ func insertAtIndex(s string, insert string, idx int) string {
 	return s[:idx] + insert + s[idx:]
 }
 
-func expendShell(s *string, value AstValue) {
+func expendSubShell(s *string, value AstValue) {
 	for idx, sh := range value.Shell {
 		cmd := exec.Command("sh", "-c", sh)
 
@@ -59,7 +59,7 @@ func GetConfig(ast AST) (Config, error) {
 
 	for key, value := range ast.Properties {
 		str := value[0].String
-		expendShell(&str, value[0])
+		expendSubShell(&str, value[0])
 		expendVariable(&config, &str, value[0])
 
 		config.Properties[key] = str
@@ -72,14 +72,14 @@ func GetConfig(ast AST) (Config, error) {
 			case "shell":
 				for _, value := range values {
 					str := value.String
-					expendShell(&str, value)
+					expendSubShell(&str, value)
 					expendVariable(&config, &str, value)
 					sec.Shell = append(sec.Shell, str)
 				}
 			case "cmd":
 				for _, value := range values {
 					str := value.String
-					expendShell(&str, value)
+					expendSubShell(&str, value)
 					expendVariable(&config, &str, value)
 					sec.Command = append(sec.Command, str)
 				}
