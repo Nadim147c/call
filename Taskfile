@@ -1,4 +1,5 @@
 APP_NAME = call
+VERSOIN ?= $(git describe --tags)
 
 [default]
 cmd = go build -v -o ${APP_NAME}

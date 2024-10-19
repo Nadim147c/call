@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -32,6 +33,17 @@ func runSection(s Section) {
 	}
 }
 
+func filterSlice(args []string) []string {
+	var filtered []string
+	for _, arg := range args {
+		// Check if the string contains "="
+		if !strings.Contains(arg, "=") {
+			filtered = append(filtered, arg)
+		}
+	}
+	return filtered
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "call [command]",
 	Short: "A highly experimental make(1) like tool",
@@ -54,7 +66,7 @@ var rootCmd = &cobra.Command{
 		}
 		Debug("AST", string(astJson))
 
-		config, err := GetConfig(ast)
+		config, err := GetConfig(ast, args)
 		if err != nil {
 			panic(err)
 		}
@@ -65,16 +77,21 @@ var rootCmd = &cobra.Command{
 		}
 		Debug("Config", string(configJson))
 
+		filteredArgs := filterSlice(args)
+
 		if len(args) == 0 {
 			if defaultSection, found := config.Sections["default"]; found {
 				runSection(defaultSection)
+				return nil
 			} else {
 				return fmt.Errorf("Default section doesn't exists")
 			}
 		}
-		for _, arg := range args {
+
+		for _, arg := range filteredArgs {
 			if section, found := config.Sections[arg]; found {
 				runSection(section)
+				return nil
 			} else {
 				return fmt.Errorf("%s section doesn't exists", arg)
 			}

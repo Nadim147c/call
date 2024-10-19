@@ -60,10 +60,19 @@ func expendVariable(c *Config, s *string, value AstValue) {
 	}
 }
 
-func GetConfig(ast AST) (Config, error) {
+func GetConfig(ast AST, args []string) (Config, error) {
 	config := Config{
 		Sections:   make(Sections),
 		Properties: make(Properties),
+	}
+
+	for _, arg := range args {
+		parts := strings.SplitN(arg, "=", 2)
+		if len(parts) == 2 {
+			key := parts[0]
+			value := parts[1]
+			config.Properties[key] = value
+		}
 	}
 
 	for key, values := range ast.Properties {
