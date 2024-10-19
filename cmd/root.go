@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -12,13 +13,13 @@ var Verbose bool
 
 func Debug(p string, a ...any) {
 	if Verbose {
-		fmt.Fprintf(os.Stderr, "%s: ", p)
+		fmt.Fprintf(os.Stderr, "%s: ", color.GreenString(p))
 		fmt.Fprintln(os.Stderr, a...)
 	}
 }
 
 func Log(p string, a ...any) {
-	fmt.Fprintf(os.Stderr, "%s: ", p)
+	fmt.Fprintf(os.Stderr, "%s: ", color.GreenString(p))
 	fmt.Fprintln(os.Stderr, a...)
 }
 
@@ -32,8 +33,8 @@ func runSection(s Section) {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "call [call-flags] -- [command]",
-	Short: "A brief description of your application",
+	Use:   "call [command]",
+	Short: "A highly experimental make(1) like tool",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		Debug("Parsing Taskfile...")
 
