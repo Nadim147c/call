@@ -62,30 +62,32 @@ func parseValues(tokens []Token) (AstValue, error) {
 
 	for i := 0; i < len(tokens); i++ {
 		token := tokens[i]
-		switch token.Type {
-		case VAR:
-			switch {
-			case tokens[i+1].Type == LCURLY && tokens[i+3].Type == RCURLY:
-				varName := tokens[i+2]
-				value.Variables[currentString.Len()] = varName.Literal
-				i += 3
 
-			case tokens[i+1].Type == LPAREN:
-				subShellString, err := parseSubShell(tokens, &i)
-				if err != nil {
-					return value, err
-				}
-				value.Shell[currentString.Len()] = subShellString
-
-			default:
-				currentString.WriteString(token.Literal)
-			}
-		case ESCAPE:
+		if token.Type == ESCAPE {
 			i++
 			currentString.WriteString(tokens[i].Literal)
-		default:
+			continue
+		}
+
+		if token.Type != VAR {
+			currentString.WriteString(token.Literal)
+			continue
+		}
+
+		if tokens[i+1].Type == LCURLY && tokens[i+3].Type == RCURLY {
+			varName := tokens[i+2]
+			value.Variables[currentString.Len()] = varName.Literal
+			i += 3
+		} else if tokens[i+1].Type == LPAREN {
+			subShellString, err := parseSubShell(tokens, &i)
+			if err != nil {
+				return value, err
+			}
+			value.Shell[currentString.Len()] = subShellString
+		} else {
 			currentString.WriteString(token.Literal)
 		}
+
 	}
 
 	value.String = currentString.String()
@@ -104,6 +106,7 @@ func GetAst(s string) (AST, error) {
 			continue
 		}
 
+		// Detect section
 		if lexer.lastToken.Type == LBRACKET {
 			ending := lexer.NextToken()
 
@@ -120,6 +123,7 @@ func GetAst(s string) (AST, error) {
 		for lexer.NextToken().Type == WHITESPACE {
 			// do nothing
 		}
+
 		var assign Token
 		optional := lexer.currentToken
 		if optional.Type == OPTIONAL {
@@ -127,7 +131,7 @@ func GetAst(s string) (AST, error) {
 		} else {
 			assign = optional
 		}
-		// Get the assign token
+
 		for lexer.NextToken().Type == WHITESPACE {
 			// do nothing
 		}
