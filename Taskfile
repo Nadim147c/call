@@ -1,17 +1,24 @@
+# To run the these tasks install call `go install` `go install github.com/Nadim147c/call`
+
 APP_NAME = call
 VERSION ?= $(git describe --tags)
 
+# Default command
 [default] build
 
-[run]
-cmd = go run main.go
+# Run the cli
+[run] 
+cmd = go run main.go 
 
+# Install all dependencies
 [deps]
 cmd = go get -v
 cmd = go mod tidy
 
+# Build the app
 [build] deps
 cmd = go build -o ${APP_NAME}
 
+# Install the app
 [install]
 cmd = go install

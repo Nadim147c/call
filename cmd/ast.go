@@ -101,6 +101,9 @@ func GetAst(s string) (AST, error) {
 	var currentSection string
 
 	for tok := lexer.NextToken(); tok.Type != EOF; tok = lexer.NextToken() {
+		if tok.Type == COMMENT {
+			lexer.readComments()
+		}
 
 		if tok.Type != IDENT {
 			continue
@@ -118,10 +121,14 @@ func GetAst(s string) (AST, error) {
 			config.Sections[tok.Literal] = make(AstProperties)
 
 			for childTask := lexer.NextToken(); childTask.Type != EOL; childTask = lexer.NextToken() {
-				if childTask.Type != IDENT {
-					continue
+				if childTask.Type == IDENT {
+					config.Sections[tok.Literal]["child"] = append(config.Sections[tok.Literal]["child"], AstValue{String: childTask.Literal})
 				}
-				config.Sections[tok.Literal]["child"] = append(config.Sections[tok.Literal]["child"], AstValue{String: childTask.Literal})
+
+				if childTask.Type == COMMENT {
+					lexer.readComments()
+					break
+				}
 			}
 
 			continue
@@ -146,12 +153,18 @@ func GetAst(s string) (AST, error) {
 
 		values := []Token{lexer.currentToken}
 
-		for true {
+		findValues := true
+		for findValues {
 			tok := lexer.NextToken()
-			if tok.Type == EOF || tok.Type == EOL {
-				break
+			switch tok.Type {
+			case EOF, EOL:
+				findValues = false
+			case COMMENT:
+				lexer.readComments()
+				findValues = false
+			default:
+				values = append(values, tok)
 			}
-			values = append(values, tok)
 		}
 
 		if key.Type != IDENT || assign.Type != ASSIGN || len(values) == 0 {

@@ -7,7 +7,7 @@ const (
 	EOF                  // End of file
 	EOL                  // End of line
 	IDENT                // Identifiers: variables, function names, etc.
-	INT                  // Integer literals
+	COMMENT              // "#" till the end of the line
 	ASSIGN               // '='
 	VAR                  // '$'
 	ESCAPE               // '\'
@@ -59,6 +59,9 @@ func (l *Lexer) NextToken() Token {
 	switch l.char {
 	case '=':
 		tok = Token{Type: ASSIGN, Literal: string(l.char)}
+		l.currentToken = tok
+	case '#':
+		tok = Token{Type: COMMENT, Literal: string(l.char)}
 		l.currentToken = tok
 	case '\\':
 		tok = Token{Type: ESCAPE, Literal: string(l.char)}
@@ -124,6 +127,11 @@ func (l *Lexer) NextToken() Token {
 
 	l.readChar()
 	return tok
+}
+
+func (l *Lexer) readComments() {
+	for tok := l.NextToken(); tok.Type != EOL && tok.Type != EOF; tok = l.NextToken() {
+	}
 }
 
 func (l *Lexer) readIdentifier() string {
