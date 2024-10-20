@@ -1,0 +1,23 @@
+#compdef call
+
+_call() {
+    local items_file="Taskfile"
+    local cmds=()
+    local vars=()
+
+    while IFS= read -r line; do
+        if [[ "$line" =~ "\[(.+)\]" ]]; then
+            m="${match[1]}"
+            if [[ "$m" != "default" ]]; then
+                cmds+=("$m")
+            fi
+        elif [[ "$line" =~ "^([A-Za-z_][A-Za-z0-9_]*)\s*\?=\s*.*" ]]; then
+            vars+=("${match[1]}")
+        fi
+    done < "$items_file"
+
+    compadd -J group2 -X Variables -S '=' -a vars
+    compadd -J group1 -X Commands -a cmds
+}
+
+compdef _call call
