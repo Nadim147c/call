@@ -24,12 +24,27 @@ func Log(p string, a ...any) {
 	fmt.Fprintln(os.Stderr, a...)
 }
 
-func runSection(s Section) {
-	if len(s.Shell) > 0 {
-		RunShell(s.Shell, false)
-	}
-	if len(s.Command) > 0 {
-		RunCommand(s.Command, false)
+func runTask(config *Config, taskName string) error {
+	if sec, found := config.Sections[taskName]; found {
+		for _, childTask := range sec.Child {
+			err := runTask(config, childTask)
+			if err != nil {
+				return err
+			}
+		}
+
+		Log("Task", taskName)
+
+		if len(sec.Shell) > 0 {
+			RunShell(sec.Shell, false)
+		}
+		if len(sec.Command) > 0 {
+			RunCommand(sec.Command, false)
+		}
+
+		return nil
+	} else {
+		return fmt.Errorf("%s section doesn't exists", taskName)
 	}
 }
 
@@ -80,21 +95,11 @@ var rootCmd = &cobra.Command{
 		filteredArgs := filterSlice(args)
 
 		if len(args) == 0 {
-			if defaultSection, found := config.Sections["default"]; found {
-				runSection(defaultSection)
-				return nil
-			} else {
-				return fmt.Errorf("Default section doesn't exists")
-			}
+			return runTask(&config, "default")
 		}
 
 		for _, arg := range filteredArgs {
-			if section, found := config.Sections[arg]; found {
-				runSection(section)
-				return nil
-			} else {
-				return fmt.Errorf("%s section doesn't exists", arg)
-			}
+			return runTask(&config, arg)
 		}
 
 		return nil

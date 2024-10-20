@@ -1,14 +1,16 @@
 APP_NAME = call
 VERSION ?= $(git describe --tags)
 
-[default]
-cmd = go build -v -o ${APP_NAME}
+[default] build
+
+[run]
+cmd = go run main.go
 
 [deps]
 cmd = go get -v
 cmd = go mod tidy
 
-[build]
+[build] deps
 cmd = go build -o ${APP_NAME}
 
 [install]

@@ -116,6 +116,14 @@ func GetAst(s string) (AST, error) {
 
 			currentSection = tok.Literal
 			config.Sections[tok.Literal] = make(AstProperties)
+
+			for childTask := lexer.NextToken(); childTask.Type != EOL; childTask = lexer.NextToken() {
+				if childTask.Type != IDENT {
+					continue
+				}
+				config.Sections[tok.Literal]["child"] = append(config.Sections[tok.Literal]["child"], AstValue{String: childTask.Literal})
+			}
+
 			continue
 		}
 

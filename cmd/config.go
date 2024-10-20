@@ -19,6 +19,7 @@ type (
 	Sections map[string]Section
 
 	Section struct {
+		Child   []string
 		Shell   []string
 		Command []string
 	}
@@ -60,6 +61,28 @@ func expendVariable(c *Config, s *string, value AstValue) {
 	}
 }
 
+func detectCycle(s Sections, key string, visited map[string]bool, recStack map[string]bool) bool {
+	if recStack[key] {
+		return true
+	}
+	if visited[key] {
+		return false
+	}
+
+	visited[key] = true
+	recStack[key] = true
+
+	for _, childKey := range s[key].Child {
+		if detectCycle(s, childKey, visited, recStack) {
+			return true
+		}
+	}
+
+	// Remove the key from the recursion stack.
+	recStack[key] = false
+	return false
+}
+
 func GetConfig(ast AST, args []string) (Config, error) {
 	config := Config{
 		Sections:   make(Sections),
@@ -96,6 +119,10 @@ func GetConfig(ast AST, args []string) (Config, error) {
 		sec := Section{}
 		for key, values := range properties {
 			switch key {
+			case "child":
+				for _, value := range values {
+					sec.Child = append(sec.Child, value.String)
+				}
 			case "shell":
 				for _, value := range values {
 					str := value.String
@@ -113,6 +140,15 @@ func GetConfig(ast AST, args []string) (Config, error) {
 			}
 		}
 		config.Sections[section] = sec
+	}
+
+	visited := make(map[string]bool)
+	recStack := make(map[string]bool)
+
+	for key := range config.Sections {
+		if detectCycle(config.Sections, key, visited, recStack) {
+			return config, fmt.Errorf("Cycle detected in the map.")
+		}
 	}
 
 	return config, nil
