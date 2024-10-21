@@ -125,17 +125,18 @@ func GetConfig(ast AST, args []string) (Config, error) {
 		}
 	}
 
-	for key, values := range ast.Properties {
-		for _, value := range values {
-			if _, keyExists := config.Properties[key]; keyExists && value.Optional {
-				continue
-			}
+	for _, property := range ast.Properties {
+		key := property.Key
+		value := property.Value
 
-			str := expendValue(&config, value, value.String)
+		if _, keyExists := config.Properties[key]; keyExists && value.Optional {
+			continue
+		}
 
-			if str != "" {
-				config.Properties[key] = str
-			}
+		str := expendValue(&config, value, value.String)
+
+		if str != "" {
+			config.Properties[key] = str
 		}
 	}
 

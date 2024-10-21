@@ -7,12 +7,17 @@ import (
 
 type (
 	AST struct {
-		Properties AstProperties
+		Properties []AstGlobalProperty
 		Sections   AstSections
 	}
 
-	AstSections   map[string]AstProperties
-	AstProperties map[string][]AstValue
+	AstGlobalProperty struct {
+		Key   string
+		Value AstValue
+	}
+
+	AstSections          map[string]AstSectionProperties
+	AstSectionProperties map[string][]AstValue
 
 	AstValue struct {
 		String    string
@@ -95,7 +100,7 @@ func parseValues(tokens []Token) (AstValue, error) {
 }
 
 func GetAst(s string) (AST, error) {
-	config := AST{Sections: make(AstSections), Properties: make(AstProperties)}
+	config := AST{Sections: make(AstSections), Properties: []AstGlobalProperty{}}
 
 	lexer := NewLexer(s)
 	var currentSection string
@@ -118,7 +123,7 @@ func GetAst(s string) (AST, error) {
 			}
 
 			currentSection = tok.Literal
-			config.Sections[tok.Literal] = make(AstProperties)
+			config.Sections[tok.Literal] = make(AstSectionProperties)
 
 			for childTask := lexer.NextToken(); childTask.Type != EOL; childTask = lexer.NextToken() {
 				if childTask.Type == IDENT {
@@ -181,13 +186,8 @@ func GetAst(s string) (AST, error) {
 			continue
 		}
 
-		if optional.Type != OPTIONAL {
-			config.Properties[key.Literal] = append(config.Properties[key.Literal], value)
-			continue
-		}
-
-		value.Optional = true
-		config.Properties[key.Literal] = append(config.Properties[key.Literal], value)
+		value.Optional = optional.Type == OPTIONAL
+		config.Properties = append(config.Properties, AstGlobalProperty{Key: tok.Literal, Value: value})
 	}
 
 	return config, nil
