@@ -32,7 +32,17 @@ func insertAtIndex(s string, insert string, idx int) string {
 	return s[:idx] + insert + s[idx:]
 }
 
-func expendSubShell(c *Config, s *string, value AstValue) {
+func expendValue(c *Config, value AstValue, input string) string {
+	positionMap := make(map[int]string)
+
+	for idx, varName := range value.Variables {
+		if varValue, found := c.Properties[varName]; found {
+			positionMap[idx] = varValue
+		} else {
+			Log(fmt.Sprintf("Variable ${%s}", varName), fmt.Errorf("Variable doesn't exists"))
+		}
+	}
+
 	for idx, sh := range value.Shell {
 		cmd := exec.Command("sh", "-c", sh)
 		cmd.Env = os.Environ()
@@ -42,23 +52,40 @@ func expendSubShell(c *Config, s *string, value AstValue) {
 		}
 
 		output, err := cmd.Output()
-		outString := strings.TrimRightFunc(string(output), unicode.IsSpace)
-		if err == nil {
-			*s = insertAtIndex(*s, outString, idx)
-		} else {
-			Debug(fmt.Sprintf("Shell $(%s)", sh), err)
+		if err != nil {
+			Log(fmt.Sprintf("Shell $(%s)", sh), err)
+			continue
 		}
-	}
-}
 
-func expendVariable(c *Config, s *string, value AstValue) {
-	for idx, varName := range value.Variables {
-		if varValue, found := c.Properties[varName]; found {
-			*s = insertAtIndex(*s, varValue, idx)
-		} else {
-			Log(fmt.Sprintf("Variable ${%s}", varName), fmt.Errorf("Variable doesn't exists"))
-		}
+		outputString := strings.TrimRightFunc(string(output), unicode.IsSpace)
+		positionMap[idx] = outputString
 	}
+
+	var outString strings.Builder
+
+	for idx, char := range []byte(input) {
+		if varValue, found := positionMap[idx]; found {
+			delete(positionMap, idx)
+			outString.WriteString(varValue)
+		}
+		outString.WriteByte(char)
+	}
+
+	if len(positionMap) != 0 {
+		var extra strings.Builder
+
+		for _, varValue := range positionMap {
+			extra.WriteByte(' ')
+			extra.WriteString(varValue)
+		}
+		if outString.Len() == 0 {
+			return extra.String()[1:]
+		}
+
+		outString.WriteString(extra.String())
+	}
+
+	return outString.String()
 }
 
 func detectCycle(s Sections, key string, visited map[string]bool, recStack map[string]bool) bool {
@@ -104,10 +131,7 @@ func GetConfig(ast AST, args []string) (Config, error) {
 				continue
 			}
 
-			str := value.String
-
-			expendVariable(&config, &str, value)
-			expendSubShell(&config, &str, value)
+			str := expendValue(&config, value, value.String)
 
 			if str != "" {
 				config.Properties[key] = str
@@ -125,16 +149,12 @@ func GetConfig(ast AST, args []string) (Config, error) {
 				}
 			case "shell":
 				for _, value := range values {
-					str := value.String
-					expendVariable(&config, &str, value)
-					expendSubShell(&config, &str, value)
+					str := expendValue(&config, value, value.String)
 					sec.Shell = append(sec.Shell, str)
 				}
 			case "cmd":
 				for _, value := range values {
-					str := value.String
-					expendVariable(&config, &str, value)
-					expendSubShell(&config, &str, value)
+					str := expendValue(&config, value, value.String)
 					sec.Command = append(sec.Command, str)
 				}
 			}
