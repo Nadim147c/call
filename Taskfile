@@ -3,6 +3,8 @@
 APP_NAME = call
 VERSION ?= $(git describe --tags)
 
+BUILD_FLAGS = -ldflags "-X github.com/${APP_NAME}/cmd.Version=${VERSION}"
+
 # Default command
 [default] build
 
@@ -17,8 +19,8 @@ cmd = go mod tidy
 
 # Build the app
 [build] deps
-cmd = go build -o ${APP_NAME}
+cmd = go build ${BUILD_FLAGS} -o ${APP_NAME}
 
 # Install the app
 [install]
-cmd = go install
+cmd = go install ${BUILD_FLAGS}

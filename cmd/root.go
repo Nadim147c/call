@@ -10,7 +10,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var Verbose bool
+var (
+	Version = "GitHub"
+	Verbose bool
+)
 
 func Debug(p string, a ...any) {
 	if Verbose {
@@ -60,8 +63,9 @@ func filterSlice(args []string) []string {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "call [command]",
-	Short: "A highly experimental make(1) like tool",
+	Use:     "call [command]",
+	Short:   "A highly experimental make(1) like tool",
+	Version: Version,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		Debug("Parsing Taskfile...")
 
@@ -114,6 +118,7 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.SetVersionTemplate(fmt.Sprintln("call version:", color.GreenString(Version)))
 	rootCmd.SetErrPrefix("Task Error:")
 	rootCmd.Flags().BoolVarP(&Verbose, "verbose", "v", false, "enable verbose logging")
 }

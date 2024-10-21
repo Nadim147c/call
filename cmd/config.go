@@ -56,7 +56,7 @@ func expendVariable(c *Config, s *string, value AstValue) {
 		if varValue, found := c.Properties[varName]; found {
 			*s = insertAtIndex(*s, varValue, idx)
 		} else {
-			Log(fmt.Sprintf("Variable $(%s)", varName), fmt.Errorf("Variable doesn't exists"))
+			Log(fmt.Sprintf("Variable ${%s}", varName), fmt.Errorf("Variable doesn't exists"))
 		}
 	}
 }
