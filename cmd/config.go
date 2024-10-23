@@ -11,14 +11,14 @@ import (
 type (
 	Config struct {
 		Properties Properties
-		Sections   Sections
+		Tasks      Tasks
 	}
 
 	Properties map[string]string
 
-	Sections map[string]Section
+	Tasks map[string]Task
 
-	Section struct {
+	Task struct {
 		Child   []string
 		Shell   []string
 		Command []string
@@ -88,7 +88,7 @@ func expendValue(c *Config, value AstValue, input string) string {
 	return outString.String()
 }
 
-func detectCycle(s Sections, key string, visited map[string]bool, recStack map[string]bool) bool {
+func detectCycle(s Tasks, key string, visited map[string]bool, recStack map[string]bool) bool {
 	if recStack[key] {
 		return true
 	}
@@ -112,7 +112,7 @@ func detectCycle(s Sections, key string, visited map[string]bool, recStack map[s
 
 func GetConfig(ast AST, args []string) (Config, error) {
 	config := Config{
-		Sections:   make(Sections),
+		Tasks:      make(Tasks),
 		Properties: make(Properties),
 	}
 
@@ -141,7 +141,7 @@ func GetConfig(ast AST, args []string) (Config, error) {
 	}
 
 	for section, properties := range ast.Sections {
-		sec := Section{}
+		sec := Task{}
 		for key, values := range properties {
 			switch key {
 			case "child":
@@ -160,14 +160,14 @@ func GetConfig(ast AST, args []string) (Config, error) {
 				}
 			}
 		}
-		config.Sections[section] = sec
+		config.Tasks[section] = sec
 	}
 
 	visited := make(map[string]bool)
 	recStack := make(map[string]bool)
 
-	for key := range config.Sections {
-		if detectCycle(config.Sections, key, visited, recStack) {
+	for key := range config.Tasks {
+		if detectCycle(config.Tasks, key, visited, recStack) {
 			return config, fmt.Errorf("Cycle detected in the map.")
 		}
 	}

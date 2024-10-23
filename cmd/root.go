@@ -29,7 +29,7 @@ func Log(p string, a ...any) {
 }
 
 func runTask(config *Config, taskName string) error {
-	if sec, found := config.Sections[taskName]; found {
+	if sec, found := config.Tasks[taskName]; found {
 		for _, childTask := range sec.Child {
 			err := runTask(config, childTask)
 			if err != nil {
