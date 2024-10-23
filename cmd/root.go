@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -69,12 +70,15 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		Debug("Parsing Taskfile...")
 
-		taskFile, err := os.ReadFile("Taskfile")
+		taskFile, err := os.Open("Taskfile")
 		if err != nil {
 			panic(err)
 		}
+		defer taskFile.Close()
 
-		ast, err := GetAst(string(taskFile))
+		reader := bufio.NewScanner(taskFile)
+
+		ast, err := GetAst(reader)
 		if err != nil {
 			panic(err)
 		}

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"strings"
 )
@@ -99,40 +100,43 @@ func parseValues(tokens []Token) (AstValue, error) {
 	return value, nil
 }
 
-func GetAst(s string) (AST, error) {
+func GetAst(s *bufio.Scanner) (AST, error) {
 	config := AST{Sections: make(AstSections), Properties: []AstGlobalProperty{}}
 
 	lexer := NewLexer(s)
 	var currentSection string
 
-	for tok := lexer.NextToken(); tok.Type != EOF; tok = lexer.NextToken() {
-		if tok.Type == COMMENT {
-			lexer.readComments()
+	for {
+		tok := lexer.NextToken()
+		if tok.Type == EOF {
+			break
 		}
 
 		if tok.Type != IDENT {
 			continue
 		}
 
+		lastToken := lexer.LastToken
 		// Detect section
-		if lexer.lastToken.Type == LBRACKET {
+		if lastToken.Type == LBRACKET {
 			ending := lexer.NextToken()
 
 			if ending.Type != RBRACKET {
-				return config, fmt.Errorf("Invalid token at %+v %+v %+v", lexer.lastToken, tok, ending)
+				return config, fmt.Errorf("Invalid token at %+v %+v %+v", lexer.LastToken, tok, ending)
 			}
 
 			currentSection = tok.Literal
 			config.Sections[tok.Literal] = make(AstSectionProperties)
 
-			for childTask := lexer.NextToken(); childTask.Type != EOL; childTask = lexer.NextToken() {
-				if childTask.Type == IDENT {
-					config.Sections[tok.Literal]["child"] = append(config.Sections[tok.Literal]["child"], AstValue{String: childTask.Literal})
-				}
+			findChildTasks := true
+			for findChildTasks {
+				childTask := lexer.NextToken()
 
-				if childTask.Type == COMMENT {
-					lexer.readComments()
-					break
+				switch childTask.Type {
+				case IDENT:
+					config.Sections[tok.Literal]["child"] = append(config.Sections[tok.Literal]["child"], AstValue{String: childTask.Literal})
+				case EOL, EOF, COMMENT:
+					findChildTasks = false
 				}
 			}
 
@@ -145,7 +149,7 @@ func GetAst(s string) (AST, error) {
 		}
 
 		var assign Token
-		optional := lexer.currentToken
+		optional := *lexer.CurrentToken
 		if optional.Type == OPTIONAL {
 			assign = lexer.NextToken()
 		} else {
@@ -156,16 +160,13 @@ func GetAst(s string) (AST, error) {
 			// do nothing
 		}
 
-		values := []Token{lexer.currentToken}
+		values := []Token{*lexer.CurrentToken}
 
 		findValues := true
 		for findValues {
 			tok := lexer.NextToken()
 			switch tok.Type {
-			case EOF, EOL:
-				findValues = false
-			case COMMENT:
-				lexer.readComments()
+			case EOF, EOL, COMMENT:
 				findValues = false
 			default:
 				values = append(values, tok)

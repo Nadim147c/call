@@ -1,5 +1,14 @@
 package cmd
 
+import (
+	"bufio"
+	"fmt"
+	"io"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+)
+
 type TokenType int
 
 const (
@@ -24,132 +33,173 @@ const (
 type Token struct {
 	Type    TokenType
 	Literal string
+	Start   Position
+	End     Position
+}
+
+type Position struct {
+	Line   int
+	Column int
 }
 
 type Lexer struct {
-	char         byte // current char under examination
-	input        string
-	lastToken    Token
-	currentToken Token
-	position     int // current position in input (points to current char)
-	readPosition int // current reading position in input (after current char)
+	scanner     *bufio.Scanner
+	lineReader  *bufio.Reader
+	currentLine string
+
+	isLastRune bool
+	lastRune   rune
+
+	LastToken    *Token
+	CurrentToken *Token
+
+	Position     Position
+	lastPosition Position
 }
 
-func NewLexer(input string) *Lexer {
-	l := &Lexer{input: input}
-	l.readChar()
-	return l
+func NewLexer(s *bufio.Scanner) *Lexer {
+	return &Lexer{scanner: s, Position: Position{Column: 0, Line: 0}}
 }
 
-func (l *Lexer) readChar() {
-	if l.readPosition >= len(l.input) {
-		l.char = 0 // ASCII code for 'NUL' or end of input
-	} else {
-		l.char = l.input[l.readPosition]
+func (l *Lexer) ReadRune() (rune, int, error) {
+	l.lastPosition = l.Position
+
+	line := l.Position.Line
+	col := l.Position.Column
+
+	if l.isLastRune {
+		if l.lastRune == '\n' {
+			col = 0
+			line--
+		}
+		l.Position = Position{Column: col, Line: line}
+		l.isLastRune = false
+		return l.lastRune, utf8.RuneLen(l.lastRune), nil
 	}
-	l.position = l.readPosition
-	l.readPosition++
+
+	if l.lineReader == nil {
+		if !l.scanner.Scan() {
+			if err := l.scanner.Err(); err != nil {
+				return 0, 0, err
+			}
+			return 0, 0, io.EOF
+		}
+		col = 0
+		line++
+		l.currentLine = l.scanner.Text()
+		if l.currentLine == "" {
+			return l.ReadRune()
+		}
+		l.lineReader = bufio.NewReader(strings.NewReader(l.currentLine))
+	}
+
+	col++
+	l.Position = Position{Column: col, Line: line}
+	r, size, err := l.lineReader.ReadRune()
+	if err == nil {
+		l.lastRune = r
+		return r, size, nil
+	}
+
+	l.lineReader = nil
+	l.lastRune = '\n'
+	return '\n', 1, nil
+}
+
+func (l *Lexer) UnreadRune() error {
+	l.Position = l.lastPosition
+	if l.isLastRune {
+		return fmt.Errorf("no rune to un-read")
+	}
+
+	l.isLastRune = true
+	return nil
 }
 
 func (l *Lexer) NextToken() Token {
-	var tok Token
+	var token Token
 
-	l.lastToken = l.currentToken
+	token.Start = l.Position
 
-	switch l.char {
+	l.LastToken = l.CurrentToken
+
+	char, _, err := l.ReadRune()
+	if err != nil {
+		if err == io.EOF {
+			return Token{Type: EOF}
+		}
+		return Token{Type: ILLEGAL}
+	}
+
+	switch char {
 	case '=':
-		tok = Token{Type: ASSIGN, Literal: string(l.char)}
-		l.currentToken = tok
-	case '#':
-		tok = Token{Type: COMMENT, Literal: string(l.char)}
-		l.currentToken = tok
+		token.Type = ASSIGN
 	case '\\':
-		tok = Token{Type: ESCAPE, Literal: string(l.char)}
-		l.currentToken = tok
+		token.Type = ESCAPE
 	case '$':
-		tok = Token{Type: VAR, Literal: string(l.char)}
-		l.currentToken = tok
+		token.Type = VAR
 	case '(':
-		tok = Token{Type: LPAREN, Literal: string(l.char)}
-		l.currentToken = tok
+		token.Type = LPAREN
 	case ')':
-		tok = Token{Type: RPAREN, Literal: string(l.char)}
-		l.currentToken = tok
+		token.Type = RPAREN
 	case '{':
-		tok = Token{Type: LCURLY, Literal: string(l.char)}
-		l.currentToken = tok
+		token.Type = LCURLY
 	case '}':
-		tok = Token{Type: RCURLY, Literal: string(l.char)}
-		l.currentToken = tok
+		token.Type = RCURLY
 	case '[':
-		tok = Token{Type: LBRACKET, Literal: string(l.char)}
-		l.currentToken = tok
+		token.Type = LBRACKET
 	case ']':
-		tok = Token{Type: RBRACKET, Literal: string(l.char)}
-		l.currentToken = tok
+		token.Type = RBRACKET
 	case '?':
-		tok = Token{Type: OPTIONAL, Literal: string(l.char)}
-		l.currentToken = tok
-	case '\r':
-		literal := "\r"
-		if l.input[l.readPosition] == '\n' {
-			l.readChar()
-			literal += "\n"
-		}
-		tok = Token{Type: EOL, Literal: literal}
-		tok = Token{Type: EOL, Literal: string(l.char)}
-		l.currentToken = tok
+		token.Type = OPTIONAL
+	case ' ', '\t':
+		token.Type = WHITESPACE
 	case '\n':
-		tok = Token{Type: EOL, Literal: string(l.char)}
-		l.currentToken = tok
-	case ' ':
-		tok = Token{Type: WHITESPACE, Literal: string(l.char)}
-		l.currentToken = tok
-	case '\t':
-		tok = Token{Type: WHITESPACE, Literal: string(l.char)}
-		l.currentToken = tok
-	case 0:
-		tok.Literal = ""
-		tok.Type = EOF
-		l.currentToken = tok
-	default:
-		switch {
-		case isIdent(l.char):
-			tok.Literal = l.readIdentifier()
-			tok.Type = IDENT
-			l.currentToken = tok
-			return tok
-		default:
-			tok = Token{Type: ILLEGAL, Literal: string(l.char)}
-			l.currentToken = tok
+		token.Type = EOL
+
+	case '#':
+		token.Type = COMMENT
+		comment := string(char)
+		for {
+			r, _, err := l.ReadRune()
+			if err != nil || r == '\n' {
+				l.UnreadRune()
+				break
+			}
+			comment += string(r)
 		}
+		token.Literal = string(comment)
+
+	default:
+		if unicode.IsLetter(char) {
+			ident := string(char)
+			for {
+				r, _, err := l.ReadRune()
+				if err != nil || !isIdent(r) {
+					l.UnreadRune()
+					break
+				}
+				ident += string(r)
+			}
+
+			token.Type = IDENT
+			token.Literal = ident
+			break
+		}
+
+		token.Type = ILLEGAL
 	}
 
-	l.readChar()
-	return tok
-}
-
-func (l *Lexer) readComments() {
-	for tok := l.NextToken(); tok.Type != EOL && tok.Type != EOF; tok = l.NextToken() {
+	if token.Literal == "" {
+		token.Literal = string(char)
 	}
+
+	token.End = l.Position
+	l.CurrentToken = &token
+
+	return token
 }
 
-func (l *Lexer) readIdentifier() string {
-	position := l.position
-	for isIdent(l.char) {
-		l.readChar()
-	}
-	return l.input[position:l.position]
-}
-
-func isLetter(char byte) bool {
-	return ('a' <= char && char <= 'z') || ('A' <= char && char <= 'Z')
-}
-
-func isDigit(char byte) bool {
-	return '0' <= char && char <= '0'
-}
-
-func isIdent(char byte) bool {
-	return isLetter(char) || isDigit(char) || (char == '_') || (char == '-')
+func isIdent(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '-'
 }
