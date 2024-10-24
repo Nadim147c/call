@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 
+	"github.com/fatih/color"
 	"github.com/google/shlex"
 )
 
 func RunShell(commands []string, parallel bool) {
 	runCommand := func(command string) {
-		Log("Shell", fmt.Sprintf("sh -c '%s'", command))
+		Log("Shell", fmt.Sprintf("sh -c '%s'", color.YellowString(command)))
 		cmd := exec.Command("sh", "-c", command)
 
 		cmd.Stdin = os.Stdin
@@ -50,8 +52,17 @@ func RunCommand(commands []string, parallel bool) {
 		}
 
 		qoutedPart := []string{}
-		for _, part := range parts {
-			qoutedPart = append(qoutedPart, fmt.Sprintf("%q", part))
+		for idx, part := range parts {
+			switch {
+			case idx == 0:
+				part = color.GreenString(part)
+			case strings.HasPrefix(part, "-"):
+				part = color.CyanString(part)
+			default:
+				part = color.RedString(part)
+			}
+
+			qoutedPart = append(qoutedPart, part)
 		}
 		Log("Command", qoutedPart)
 
