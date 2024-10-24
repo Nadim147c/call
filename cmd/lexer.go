@@ -171,23 +171,23 @@ func (l *Lexer) NextToken() Token {
 		token.Literal = string(comment)
 
 	default:
-		if unicode.IsLetter(char) {
-			ident := string(char)
-			for {
-				r, _, err := l.ReadRune()
-				if err != nil || !isIdent(r) {
-					l.UnreadRune()
-					break
-				}
-				ident += string(r)
-			}
-
-			token.Type = IDENT
-			token.Literal = ident
+		if !unicode.IsLetter(char) {
+			token.Type = ILLEGAL
 			break
 		}
 
-		token.Type = ILLEGAL
+		ident := string(char)
+		for {
+			r, _, err := l.ReadRune()
+			if err != nil || !isIdent(r) {
+				l.UnreadRune()
+				break
+			}
+			ident += string(r)
+		}
+
+		token.Type = IDENT
+		token.Literal = ident
 	}
 
 	if token.Literal == "" {
