@@ -80,9 +80,13 @@ func parseValues(tokens []Token) (AstValue, error) {
 			continue
 		}
 
-		if tokens[i+1].Type == LCURLY && tokens[i+3].Type == RCURLY {
-			varName := tokens[i+2]
-			value.Variables[currentString.Len()] = varName.Literal
+		if tokens[i+1].Type == IDENT {
+			i++
+			identTok := tokens[i]
+			value.Variables[currentString.Len()] = identTok.Literal
+		} else if tokens[i+1].Type == LCURLY && tokens[i+3].Type == RCURLY {
+			identTok := tokens[i+2]
+			value.Variables[currentString.Len()] = identTok.Literal
 			i += 3
 		} else if tokens[i+1].Type == LPAREN {
 			subShellString, err := parseSubShell(tokens, &i)

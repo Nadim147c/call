@@ -20,8 +20,8 @@ cmd = go mod tidy
 
 # Build the app
 [build] deps
-cmd = go build ${BUILD_FLAGS} -o "${APP_NAME}"
+cmd = go build $BUILD_FLAGS -o "$APP_NAME"
 
 # Install the app
 [install]
-cmd = go install ${BUILD_FLAGS}
+cmd = go install $BUILD_FLAGS

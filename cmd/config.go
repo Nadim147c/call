@@ -39,7 +39,7 @@ func expendValue(c *Config, value AstValue, input string) string {
 		if varValue, found := c.Properties[varName]; found {
 			positionMap[idx] = varValue
 		} else {
-			Log(fmt.Sprintf("Variable ${%s}", varName), fmt.Errorf("Variable doesn't exists"))
+			Log(fmt.Sprintf("Variable $%s", varName), fmt.Errorf("Variable doesn't exists"))
 		}
 	}
 
